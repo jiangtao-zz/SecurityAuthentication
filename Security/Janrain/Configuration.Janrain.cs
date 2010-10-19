@@ -1,60 +1,26 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.Configuration;
-using System.Web.Configuration;
-using QShine.Framework.Configuration;
 
 namespace SecurityAuthentication.Configuration
 {
-    internal class JanrainSection : ConfigurationSection
-    {
-        private const string signInElement = "signIn";
-
-        #region properties
-
-        //defines section element collection
-        [ConfigurationProperty(signInElement)]
-        public NamedElementCollection<NamedValueElement> SignIn
-        {
-            get { return (NamedElementCollection<NamedValueElement>)this[signInElement]; }
-            set { this[signInElement] = value;}
-        }
-
-        #endregion
-
-    }
 
     public class JanrainSetting
     {
-        private static JanrainSection section;
+        private static NameValueCollection section;
         private const string sectionName = "janrain";
 
         /// <summary>
         /// Get Janrain configuration section from web.config/app.config
         /// </summary>
         /// <returns>Return a repository configuration section instance</returns>
-        internal static JanrainSection Section
+        internal static NameValueCollection Section
         {
             get
             {
                 if (section == null)
                 {
-                    section = (JanrainSection)ConfigurationManager.GetSection(sectionName);
-                    if (section == null)
-                    {
-                        //Get web.config object
-                        System.Configuration.Configuration config = WebConfigurationManager.OpenWebConfiguration("~");
-                        //Get apps.config for EXE only
-                        //System.Configuration.Configuration config = ConfigurationManager.OpenExeConfiguration( ConfigurationUserLevel.None) ;
-                        foreach (var janrainSection in config.Sections)
-                        {
-                            if (janrainSection is JanrainSection)
-                            {
-                                section = (JanrainSection)janrainSection;
-                                break;
-                            }
-                        }
-                    }
-
+                    section = (NameValueCollection)ConfigurationManager.GetSection(sectionName);
                 }
                 if (section == null)
                 {
@@ -72,12 +38,8 @@ namespace SecurityAuthentication.Configuration
         internal static string NamedValue(string name, string defaultValue)
         {
             string value = "";
-            var signCollection = Section.SignIn;
 
-            if (signCollection!=null && signCollection.Contains(name))
-            {
-                value = signCollection[name].Value;
-            }
+            value = Section[name];
             if (String.IsNullOrEmpty(value))
             {
                 //set default language preference
