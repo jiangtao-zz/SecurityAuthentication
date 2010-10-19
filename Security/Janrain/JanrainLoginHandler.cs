@@ -19,7 +19,11 @@ using System.Net;
 using System.Text;
 using System.Xml.XPath;
 
+using System.Globalization;
+using System.Threading;
+
 using SecurityAuthentication.Configuration;
+using SecurityAuthentication;
 
 namespace SecurityAuthentication
 {
@@ -84,22 +88,22 @@ namespace SecurityAuthentication
                 Rpx rpx = new Rpx(apiKey, "https://golive.rpxnow.com/");
 
 
-                try
-                {
+                //try
+                //{
                     // Get the user's details
                     XmlElement authInfo = rpx.AuthInfo(loginToken);
 
 
                     // Log the user in
                     this.loginUser(authInfo, response, returnUrl);
-                }
-                catch (SystemException ex)
-                {
-                    StringBuilder errorHtml = new StringBuilder();
-                    errorHtml.AppendLine("Failed to login through partner site.");
-                    errorHtml.AppendLine("<span style='display:none'>"+ex.Message+"</span>");
-                    response.Write(errorHtml.ToString());
-                }
+                //}
+                //catch (SystemException ex)
+                //{
+                //    StringBuilder errorHtml = new StringBuilder();
+                //    errorHtml.AppendLine("Failed to login through partner site.");
+                //    errorHtml.AppendLine("<span style='display:none'>"+ex.Message+"</span>");
+                //    response.Write(errorHtml.ToString());
+                //}
 
             }
             else
@@ -170,8 +174,18 @@ namespace SecurityAuthentication
             {
                 // No email address
             }
-            // Set the authentication cookie and go back to the home page
-            FormsAuthentication.SetAuthCookie(userProvidersUniqueID, false);
+
+            //Save janrain claims properties in cookie for furture access.
+            // get a unique identity name froma janrain
+            CustomIdentity customIdentity = new CustomIdentity(userProvidersUniqueID);
+
+            customIdentity.Email = emailAddress;
+            customIdentity.DisplayName= displayName;
+            customIdentity.UserProvidersUniqueId = userProvidersUniqueID;
+
+            //Set the authentication cookie and go back to the home page
+            FormsAuthenticationExt.SetAuthCookie(customIdentity);
+            //FormsAuthentication.SetAuthCookie(userProvidersUniqueID, false);
             response.Redirect(returnUrl);
         }
 

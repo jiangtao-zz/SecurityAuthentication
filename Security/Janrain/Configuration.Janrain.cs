@@ -72,9 +72,11 @@ namespace SecurityAuthentication.Configuration
         internal static string NamedValue(string name, string defaultValue)
         {
             string value = "";
-            if (JanrainSetting.Section.SignIn.Contains(name))
+            var signCollection = Section.SignIn;
+
+            if (signCollection!=null && signCollection.Contains(name))
             {
-                value = JanrainSetting.Section.SignIn[name].Value;
+                value = signCollection[name].Value;
             }
             if (String.IsNullOrEmpty(value))
             {
