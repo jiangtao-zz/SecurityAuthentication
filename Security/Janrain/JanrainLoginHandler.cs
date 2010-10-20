@@ -75,7 +75,7 @@ namespace SecurityAuthentication
 
             if (request.QueryString["mode"] == "login")
             {
-                string apiKey = JanrainSetting.AppKey;// "cc3e8772a5a70ec1edcfb124ac396142e8e99b89";
+                string apiKey = JanrainSetting.ApiKey;
                 const string paramToken = "token";
 
                 //Check the token postback from Janrain Server
@@ -84,8 +84,14 @@ namespace SecurityAuthentication
                 // Get the login token passed back from the RPX authentication service
                 string loginToken = request.Form[paramToken];
 
+                if (String.IsNullOrEmpty(loginToken))
+                {
+                    response.Redirect(JanrainSetting.HomeUrl);
+                    return;
+                }
+
                 // Create an RPX wrapper to get the user's data
-                Rpx rpx = new Rpx(apiKey, "https://golive.rpxnow.com/");
+                Rpx rpx = new Rpx(apiKey, JanrainSetting.ApplicationDomain);
 
 
                 //try
@@ -117,7 +123,7 @@ namespace SecurityAuthentication
                 janrainScript.AppendLine("<head>");
                 janrainScript.AppendLine("</head>");
                 janrainScript.AppendLine("<body>");
-                janrainScript.AppendLine("<a id=\"loginRef\" href=\"https://golive.rpxnow.com/openid/v2/signin?token_url=http%3A%2F%2Fgo.qshine.com%2FLoginAuthentication.axd%3Fmode%3Dlogin%26originate%3D" + returnUrl + "\">Redirect user to login page</a>");
+                janrainScript.AppendLine("<a id=\"loginRef\" href=\""+JanrainSetting.ApplicationDomain+"openid/v2/signin?token_url=http%3A%2F%2Fgo.qshine.com%2FLoginAuthentication.axd%3Fmode%3Dlogin%26originate%3D" + returnUrl + "\">Redirect user to login page</a>");
                 janrainScript.AppendLine("<script type=\"text/javascript\">");
                 janrainScript.AppendLine("var rpxJsHost = ((\"https:\" == document.location.protocol) ? \"https://\" : \"http://static.\");");
                 janrainScript.AppendLine("document.write(unescape(\"%3Cscript src='\" + rpxJsHost +");
@@ -145,43 +151,26 @@ namespace SecurityAuthentication
             // Get the user's unique identifier (this will ALWAYS be returned regardless of the login provider
             string userProvidersUniqueID = authInfo.GetElementsByTagName("identifier")[0].InnerText;
 
-
-            // See if the user's display name is provided (not supplied by some providers
-            XmlNodeList displayNameNodeList = authInfo.GetElementsByTagName("displayName");
-            string displayName = null;
-            if (displayNameNodeList != null && displayNameNodeList.Count > 0)
-            {
-                // Got a display name
-                displayName = displayNameNodeList[0].InnerText;
-            }
-            else
-            {
-                // No display name
-            }
-            // See if the user's email address is provided (not supplied by some providers)
-            XmlNodeList emailAddressNodeList = authInfo.GetElementsByTagName("email");
-
-
-            string emailAddress = null;
-
-
-            if (emailAddressNodeList != null && emailAddressNodeList.Count > 0)
-            {
-                // Got an email address
-                emailAddress = emailAddressNodeList[0].InnerText;
-            }
-            else
-            {
-                // No email address
-            }
-
-            //Save janrain claims properties in cookie for furture access.
+            //Save janrain claims properties in cookie for future access.
             // get a unique identity name froma janrain
             CustomIdentity customIdentity = new CustomIdentity(userProvidersUniqueID);
-
-            customIdentity.Email = emailAddress;
-            customIdentity.DisplayName= displayName;
             customIdentity.UserProvidersUniqueId = userProvidersUniqueID;
+
+            string[] authFields = new string[] { "identifier", "displayName","providerName","primaryKey","preferredUsername",
+            "gender","birthday","utcOffset","email","verifiedEmail","url","verifiedEmail"};
+
+            foreach (var x in authFields)
+            {
+                // See if the user's display name is provided (not supplied by some providers
+                XmlNodeList nodeList = authInfo.GetElementsByTagName(x);
+                string value = null;
+                if (nodeList != null && nodeList.Count > 0)
+                {
+                    // Got a display name
+                    value = nodeList[0].InnerText;
+                    customIdentity.Claims.Add(x, value);
+                }
+            }
 
             //Set the authentication cookie and go back to the home page
             FormsAuthenticationExt.SetAuthCookie(customIdentity);

@@ -74,7 +74,7 @@ namespace SecurityAuthentication
                 string[] keyValuePairs = x.Split('\'');
                 if (!String.IsNullOrEmpty(keyValuePairs[0]))
                 {
-                    customIdentity.Claims.Add(keyValuePairs[0], x.Substring(keyValuePairs[0].Length).Replace(replacementOfSeparator, "'"));
+                    customIdentity.Claims.Add(keyValuePairs[0], x.Substring(keyValuePairs[0].Length+1).Replace(replacementOfSeparator, "'"));
                 }
             }
             //Sync both web context user and current principal

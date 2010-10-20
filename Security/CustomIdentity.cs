@@ -5,14 +5,18 @@ using System.Security.Principal;
 namespace SecurityAuthentication
 {
     /// <summary>
-    /// A common custom identity which contains three generic claims:
+    /// A generic custom identity which contains three claims:
     ///     displayName: an Identity name to be display
-    ///     userProvidersUniqueId: a unique Id for user identity provider
+    ///     userProvidersUniqueId: a unique Id within a user identity provider
     ///     email: email address associate to this identity
     ///     
-    /// Any other claims could be found from dictionary property Claims
+    /// Any other claims could be found from Claims property collection.
     /// 
     /// </summary>
+    /// <remarks>
+    /// The CustomIdentity implemented a generic custom identity interface represent a user.
+    /// 
+    /// </remarks>
     public class CustomIdentity : GenericIdentity,ICustomIdentity
     {
         private const string userProvidersUniqueId = "userProvidersUniqueId";

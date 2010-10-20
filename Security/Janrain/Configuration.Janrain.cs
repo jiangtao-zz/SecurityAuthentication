@@ -4,7 +4,11 @@ using System.Configuration;
 
 namespace SecurityAuthentication.Configuration
 {
-
+    /// <summary>
+    /// Configuration setting for Janrain login service.
+    /// Janrain provides a gateway service to access most social website OpenId security token service.
+    /// We need create a janrain account for all your domain applications to consume Janrain login service.
+    /// </summary>
     public class JanrainSetting
     {
         private static NameValueCollection section;
@@ -40,8 +44,12 @@ namespace SecurityAuthentication.Configuration
             string value = "";
 
             value = Section[name];
-            if (String.IsNullOrEmpty(value))
+            if (value==null)
             {
+                if (defaultValue == null)
+                {
+                    throw new SystemException(String.Format("The key element \"{0}\" is missing in janrain section", name));
+                }
                 //set default language preference
                 value = defaultValue;
             }
@@ -49,17 +57,45 @@ namespace SecurityAuthentication.Configuration
 
         }
 
+        internal static string NamedValue(string name)
+        {
+            return NamedValue(name, null);
+        }
+
         /// <summary>
-        /// Janrain appKey for each relay partner
+        /// apiKey for each Janrain account.
         /// </summary>
-        public static string AppKey
+        /// <remarks>
+        /// Janrain will assign an API key for each Janrain account.
+        /// The designated domains could use this apiKey to query security token from its STS service.
+        /// </remarks>
+        public static string ApiKey
         {
             get
             {
-                return NamedValue("appKey", "");
+                return NamedValue("apiKey");
             }
         }
 
+        /// <summary>
+        /// login application domain for each Janrain account.
+        /// </summary>
+        /// <remarks>
+        /// Janrain will assign a login application domain for each Janrain account.
+        /// This application domain is a gateway to query STS service by Janrain system.
+        /// </remarks>
+        public static string ApplicationDomain
+        {
+            get
+            {
+                string value =NamedValue("applicationDomain");
+                if (!value.EndsWith("/"))
+                {
+                    value += "/";
+                }
+                return value;
+            }
+        }
         /// <summary>
         /// property to get the Language preference 
         /// </summary>
@@ -88,6 +124,19 @@ namespace SecurityAuthentication.Configuration
             get
             {
                 return NamedValue("overlay", "true");
+            }
+        }
+        /// <summary>
+        /// property to get a home Url
+        /// </summary>
+        /// <remarks>
+        /// The user will be re-direct to this home Url when the authentication process cancelled, 
+        /// </remarks>
+        public static string HomeUrl
+        {
+            get
+            {
+                return NamedValue("homeUrl", "");
             }
         }
     }
