@@ -1,26 +1,15 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Configuration;
-using System.Data;
-using System.Linq;
+using System.Security;
+using System.Threading;
+using System.Xml;
+using System.Text;
+using System.Globalization;
+
 using System.Web;
 using System.Web.Security;
-using System.Web.UI;
-using System.Web.UI.HtmlControls;
-using System.Web.UI.WebControls;
-using System.Web.UI.WebControls.WebParts;
-using System.Xml;
-using System.Xml.Linq;
-using System.Security;
-
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using System.Text;
-using System.Xml.XPath;
-
-using System.Globalization;
-using System.Threading;
 
 using SecurityAuthentication.Configuration;
 using SecurityAuthentication;
@@ -77,14 +66,35 @@ namespace SecurityAuthentication
                 case "login":
                     ProcessLoginRequest(context);
                     break;
-                case "widget_embed":
-                    ProcessEmbedWidgetRequest(context);
+                case "logout":
+                    ProcessLogoutRequest(context);
                     break;
-                case "widget_overlay":
+                case "xdReceiver":
+                    ProcessXdReceiver(context);
+                    break;
                 default:
-                    ProcessDefaultWidgetRequest(context);
+                    if (!String.IsNullOrEmpty(request.QueryString["iframe"]))
+                    {
+                        ProcessEmbedWidgetRequest(context);
+                    }
+                    else
+                    {
+                        ProcessDefaultWidgetRequest(context);
+                    }
                     break;
             }
+        }
+
+        private void ProcessLogoutRequest(HttpContext context)
+        {
+            HttpResponse response = context.Response;
+            HttpRequest request = context.Request;
+
+            if (context.User.Identity.IsAuthenticated)
+            {
+                FormsAuthentication.SignOut();
+            }
+            response.Redirect(this.LogoutUrl);
         }
 
         private void ProcessLoginRequest(HttpContext context)
@@ -108,7 +118,7 @@ namespace SecurityAuthentication
             }
 
             // Create an RPX wrapper to get the user's data
-            Rpx rpx = new Rpx(apiKey, JanrainSetting.ApplicationDomain);
+            Rpx rpx = new Rpx(apiKey, this.RpxApplicationDomainUrl);
 
 
             try
@@ -129,6 +139,29 @@ namespace SecurityAuthentication
             }
 
         }
+        private void ProcessXdReceiver(HttpContext context)
+        {
+            HttpResponse response = context.Response;
+            HttpRequest request = context.Request;
+
+            //Add javascript into current login page
+            StringBuilder janrainScript = new StringBuilder();
+
+            janrainScript.AppendLine("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">");
+            janrainScript.AppendLine("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
+            janrainScript.AppendLine("<head>");
+            janrainScript.AppendLine("</head>");
+            janrainScript.AppendLine("<body>");
+            janrainScript.AppendLine("<script type=\"text/javascript\">");
+            janrainScript.AppendLine("var rpxJsHost = ((\"https:\" == document.location.protocol) ? \"https://\" : \"http://static.\");");
+            janrainScript.AppendLine("document.write(unescape(\"%3Cscript src='\" + rpxJsHost +");
+            janrainScript.AppendLine("\"rpxnow.com/js/lib/rpx.js' type='text/javascript'%3E%3C/script%3E\"));");
+            janrainScript.AppendLine("</script>");
+            janrainScript.AppendLine("</body>");
+            janrainScript.AppendLine("</html>");
+            response.Write(janrainScript.ToString());
+
+        }
 
         private void ProcessDefaultWidgetRequest(HttpContext context)
         {
@@ -137,14 +170,6 @@ namespace SecurityAuthentication
 
             //Add javascript into current login page
             StringBuilder janrainScript = new StringBuilder();
-            String returnUrl = request.QueryString["ReturnUrl"];
-            String tokenUrl = request.Url.Scheme + ":%2F%2F" + request.Url.Authority + request.ApplicationPath +
-                "%2FLoginAuthentication.axd%3Fmode%3Dlogin%26originate%3D" + returnUrl;
-
-            //tokenUrl = "http://go.qshine.com/LoginAuthentication.axd%3Fmode%3Dlogin%26originate%3D" + returnUrl;
-            string url = JanrainSetting.ApplicationDomain + "openid/embed?token_url=" + tokenUrl;
-
-
 
             janrainScript.AppendLine("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">");
             janrainScript.AppendLine("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
@@ -157,15 +182,46 @@ namespace SecurityAuthentication
             janrainScript.AppendLine("\"rpxnow.com/js/lib/rpx.js' type='text/javascript'%3E%3C/script%3E\"));");
             janrainScript.AppendLine("</script>");
             janrainScript.AppendLine("<script type=\"text/javascript\">");
-            janrainScript.AppendLine("RPXNOW.overlay = " + JanrainSetting.Overlay + ";");
-            //janrainScript.AppendLine("RPXNOW.ssl = true;");
-            janrainScript.AppendLine("RPXNOW.language_preference = '" + JanrainSetting.LanguagePreference + "';");
-            janrainScript.AppendLine("RPXNOW.default_provider = \"" + JanrainSetting.DefaultProvider + "\";");
-//            janrainScript.AppendLine(String.Format("RPXNOW.show('{0}','{1}');",tokenUrl,"golive.rpxnow.com"));//JanrainSetting.ApplicationDomain));
 
+            string xdReceiver = JanrainSetting.XdReceiver;
+
+            if (String.IsNullOrEmpty(xdReceiver))
+            {
+                xdReceiver = this.XdReceiverUrl;
+            }
+            if (!(xdReceiver.StartsWith("http://", StringComparison.InvariantCultureIgnoreCase) ||
+                xdReceiver.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                if (xdReceiver.StartsWith("/"))
+                {
+                    xdReceiver = xdReceiver.Substring(1);
+                }
+                xdReceiver = this.ApplicationRootUrl + xdReceiver;
+            }
+            janrainScript.AppendLine("RPXNOW.init ({ appId: \""+JanrainSetting.AppId+"\", xdReceiver: \""+xdReceiver+"\"});");
+            if (!String.IsNullOrEmpty(JanrainSetting.Overlay))
+            {
+                janrainScript.AppendLine("RPXNOW.overlay = " + JanrainSetting.Overlay + ";");
+            }
+            if (!String.IsNullOrEmpty(JanrainSetting.LanguagePreference))
+            {
+                janrainScript.AppendLine("RPXNOW.language_preference = '" + JanrainSetting.LanguagePreference + "';");
+            }
+            if (!String.IsNullOrEmpty(JanrainSetting.DefaultProvider))
+            {
+                janrainScript.AppendLine("RPXNOW.default_provider = '" + JanrainSetting.DefaultProvider + "';");
+            }
+            if (!String.IsNullOrEmpty(JanrainSetting.Flags))
+            {
+                janrainScript.AppendLine("RPXNOW.flags = \"" + JanrainSetting.Flags + "\";");
+            }
+            janrainScript.AppendLine("RPXNOW.ssl = " + ((JanrainSetting.Ssl) ? "true" : "false") + ";");
+            janrainScript.AppendLine("RPXNOW.realm = \"" + this.RpxApplicationDomain + "\";");
+            janrainScript.AppendLine("RPXNOW.token_url = \"" + this.TokenUrl + "\";");
+            janrainScript.AppendLine("RPXNOW.show();");
             janrainScript.AppendLine("</script>");
 
-            janrainScript.AppendLine("<iframe src=\""+url+"\"  scrolling=\"no\" frameBorder=\"no\" style=\"width:400px;height:240px; vertical-align: middle;\" align=\"center\"></iframe>");
+            //janrainScript.AppendLine("<div align=\"center\"><iframe src=\"" + GetLoginUrl(request) + "\"  scrolling=\"no\" frameBorder=\"no\" style=\"width:400px;height:240px; vertical-align: middle;\" align=\"center\"></iframe></center>");
 
             janrainScript.AppendLine("</body>");
             janrainScript.AppendLine("</html>");
@@ -173,50 +229,138 @@ namespace SecurityAuthentication
         }
 
 
-        private void ProcessDefaultWidgetRequest1(HttpContext context)
-        {
-            HttpResponse response = context.Response;
-            HttpRequest request = context.Request;
+        //private void ProcessDefaultWidgetRequest1(HttpContext context)
+        //{
+        //    HttpResponse response = context.Response;
+        //    HttpRequest request = context.Request;
 
-            //Add javascript into current login page
-            StringBuilder janrainScript = new StringBuilder();
-            String returnUrl = request.QueryString["ReturnUrl"];
+        //    Add javascript into current login page
+        //    StringBuilder janrainScript = new StringBuilder();
+        //    String returnUrl = request.QueryString["ReturnUrl"];
 
-            janrainScript.AppendLine("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">");
-            janrainScript.AppendLine("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
-            janrainScript.AppendLine("<head>");
-            janrainScript.AppendLine("</head>");
-            janrainScript.AppendLine("<body>");
-            janrainScript.AppendLine("<a id=\"loginRef\" href=\""+JanrainSetting.ApplicationDomain+"openid/v2/signin?token_url=http%3A%2F%2Fgo.qshine.com%2FLoginAuthentication.axd%3Fmode%3Dlogin%26originate%3D" + returnUrl + "\">Redirect user to login page</a>");
-            janrainScript.AppendLine("<script type=\"text/javascript\">");
-            janrainScript.AppendLine("var rpxJsHost = ((\"https:\" == document.location.protocol) ? \"https://\" : \"http://static.\");");
-            janrainScript.AppendLine("document.write(unescape(\"%3Cscript src='\" + rpxJsHost +");
-            janrainScript.AppendLine("\"rpxnow.com/js/lib/rpx.js' type='text/javascript'%3E%3C/script%3E\"));");
-            janrainScript.AppendLine("</script>");
-            janrainScript.AppendLine("<script type=\"text/javascript\">");
-            janrainScript.AppendLine("RPXNOW.overlay = "+JanrainSetting.Overlay+";");
-            janrainScript.AppendLine("RPXNOW.language_preference = '" + JanrainSetting.LanguagePreference + "';");
-            janrainScript.AppendLine("RPXNOW.default_provider = \"" + JanrainSetting.DefaultProvider + "\";");
-            janrainScript.AppendLine("</script>");
+        //    janrainScript.AppendLine("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">");
+        //    janrainScript.AppendLine("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
+        //    janrainScript.AppendLine("<head>");
+        //    janrainScript.AppendLine("</head>");
+        //    janrainScript.AppendLine("<body>");
+        //    janrainScript.AppendLine("<a id=\"loginRef\" href=\""+this.rpxApplicationDomain+"/openid/v2/signin?token_url=http%3A%2F%2Fgo.qshine.com%2FLoginAuthentication.axd%3Fmode%3Dlogin%26originate%3D" + returnUrl + "\">Redirect user to login page</a>");
+        //    janrainScript.AppendLine("<script type=\"text/javascript\">");
+        //    janrainScript.AppendLine("var rpxJsHost = ((\"https:\" == document.location.protocol) ? \"https://\" : \"http://static.\");");
+        //    janrainScript.AppendLine("document.write(unescape(\"%3Cscript src='\" + rpxJsHost +");
+        //    janrainScript.AppendLine("\"rpxnow.com/js/lib/rpx.js' type='text/javascript'%3E%3C/script%3E\"));");
+        //    janrainScript.AppendLine("</script>");
+        //    janrainScript.AppendLine("<script type=\"text/javascript\">");
+        //    janrainScript.AppendLine("RPXNOW.overlay = "+JanrainSetting.Overlay+";");
+        //    janrainScript.AppendLine("RPXNOW.language_preference = '" + JanrainSetting.LanguagePreference + "';");
+        //    janrainScript.AppendLine("RPXNOW.default_provider = \"" + JanrainSetting.DefaultProvider + "\";");
+        //    janrainScript.AppendLine("</script>");
 
-            //Send request to Janrain for user login
-            janrainScript.AppendLine("<script type=\"text/javascript\">");
-            janrainScript.AppendLine("setTimeout('loginJanRain()',1);");
-            janrainScript.AppendLine("function loginJanRain(){document.getElementById('loginRef').click();}");
-            janrainScript.AppendLine("</script>");
-            janrainScript.AppendLine("</body>");
-            janrainScript.AppendLine("</html>");
-            response.Write(janrainScript.ToString());
-        }
+        //    Send request to Janrain for user login
+        //    janrainScript.AppendLine("<script type=\"text/javascript\">");
+        //    janrainScript.AppendLine("setTimeout('loginJanRain()',1);");
+        //    janrainScript.AppendLine("function loginJanRain(){document.getElementById('loginRef').click();}");
+        //    janrainScript.AppendLine("</script>");
+        //    janrainScript.AppendLine("</body>");
+        //    janrainScript.AppendLine("</html>");
+        //    response.Write(janrainScript.ToString());
+        //}
 
         private void ProcessEmbedWidgetRequest(HttpContext context)
         {
             HttpResponse response = context.Response;
             HttpRequest request = context.Request;
-
-            string url = JanrainSetting.ApplicationDomain+"openid/embed?token_url=http%3A%2F%2Fgo.qshine.com%2FLoginAuthentication.axd%3Fmode%3Dlogin%26originate%3D";
-
+            string url = this.LoginUrl;
+            foreach (string x in request.QueryString.AllKeys)
+            {
+                if (x != "iframe")
+                {
+                    url += String.Format("&{0}={1}", x, request.QueryString[x]);
+                }
+            }
             response.Redirect(url);
+        }
+        /// <summary>
+        /// Get current web application root Url which end with "/"
+        /// </summary>
+        private string ApplicationRootUrl
+        {
+            get
+            {
+                HttpRequest request = HttpContext.Current.Request;
+                string root = request.Url.Scheme + "://" + request.Url.Authority + request.ApplicationPath;
+                if (!root.EndsWith("/"))
+                {
+                    root = root + "/";
+                }
+                return root;
+            }
+        }
+
+        private string XdReceiverUrl
+        {
+            get
+            {
+                return ApplicationRootUrl + "LoginAuthentication.axd?mode=xdReceiver";
+            }
+        }
+
+        private string TokenUrl
+        {
+            get
+            {
+                HttpRequest request = HttpContext.Current.Request;
+
+                String returnUrl = request.QueryString["ReturnUrl"];
+
+                if (String.IsNullOrEmpty(returnUrl))
+                {
+                    returnUrl = JanrainSetting.HomeUrl;
+                }
+                String tokenUrl = ApplicationRootUrl + "LoginAuthentication.axd?mode=login&originate=" + returnUrl;
+                return tokenUrl;
+            }
+        }
+
+        private string RpxApplicationDomainUrl
+        {
+            get
+            {
+                return "https://" + this.RpxApplicationDomain;
+            }
+        }
+
+        private string RpxApplicationDomain
+        {
+            get
+            {
+                string appDomainUrl = JanrainSetting.ApplicationDomain;
+                if (!appDomainUrl.StartsWith("https://"))
+                {
+                    appDomainUrl = "https://" + appDomainUrl;
+                }
+                Uri url = new Uri(appDomainUrl);
+
+                return url.Authority;
+            }
+        }
+
+        private string LoginUrl
+        {
+            get
+            {
+                return this.RpxApplicationDomainUrl + 
+                    "/openid/embed?token_url=" + 
+                    HttpContext.Current.Server.UrlEncode(this.TokenUrl);
+            }
+        }
+
+        private string LogoutUrl
+        {
+            get
+            {
+                string url = JanrainSetting.HomeUrl;
+                return url;
+            }
         }
 
 
@@ -231,7 +375,7 @@ namespace SecurityAuthentication
             customIdentity.UserProvidersUniqueId = userProvidersUniqueID;
 
             string[] authFields = new string[] { "identifier", "displayName","providerName","primaryKey","preferredUsername",
-            "gender","birthday","utcOffset","email","verifiedEmail","url","verifiedEmail"};
+            "gender","birthday","utcOffset","email","verifiedEmail","url"};
 
             foreach (var x in authFields)
             {
@@ -252,189 +396,5 @@ namespace SecurityAuthentication
             response.Redirect(returnUrl);
         }
 
-    }
-
-    public class Rpx
-    {
-        private string apiKey;
-        private string baseUrl;
-
-        public Rpx(string apiKey, string baseUrl)
-        {
-            while (baseUrl.EndsWith("/"))
-                baseUrl = baseUrl.Substring(0, baseUrl.Length - 1);
-
-            this.apiKey = apiKey;
-            this.baseUrl = baseUrl;
-        }
-
-        public string getApiKey() { return apiKey; }
-        public string getBaseUrl() { return baseUrl; }
-
-        public XmlElement AuthInfo(string token)
-        {
-            Dictionary<string, string> query = new Dictionary<string, string>();
-            query.Add("token", token);
-            return ApiCall("auth_info", query);
-        }
-
-        public ArrayList Mappings(string primaryKey)
-        {
-            Dictionary<string, string> query = new Dictionary<string, string>();
-            query.Add("primaryKey", primaryKey);
-            XmlElement rsp = ApiCall("mappings", query);
-            XmlElement oids = (XmlElement)rsp.FirstChild;
-
-            ArrayList result = new ArrayList();
-
-            for (int i = 0; i < oids.ChildNodes.Count; i++)
-            {
-                result.Add(oids.ChildNodes[i].InnerText);
-            }
-
-            return result;
-        }
-
-        public Dictionary<string, ArrayList> AllMappings()
-        {
-            Dictionary<string, string> query = new Dictionary<string, string>();
-            XmlElement rsp = ApiCall("all_mappings", query);
-
-            Dictionary<string, ArrayList> result = new Dictionary<string, ArrayList>();
-            XPathNavigator nav = rsp.CreateNavigator();
-
-            XPathNodeIterator mappings = (XPathNodeIterator)nav.Evaluate("/rsp/mappings/mapping");
-            foreach (XPathNavigator m in mappings)
-            {
-                string remote_key = GetContents("./primaryKey/text()", m);
-                XPathNodeIterator ident_nodes = (XPathNodeIterator)m.Evaluate("./identifiers/identifier");
-                ArrayList identifiers = new ArrayList();
-                foreach (XPathNavigator i in ident_nodes)
-                {
-                    identifiers.Add(i.ToString());
-                }
-
-                result.Add(remote_key, identifiers);
-            }
-
-            return result;
-        }
-
-        private string GetContents(string xpath_expr, XPathNavigator nav)
-        {
-            XPathNodeIterator rk_nodes = (XPathNodeIterator)nav.Evaluate(xpath_expr);
-            while (rk_nodes.MoveNext())
-            {
-                return rk_nodes.Current.ToString();
-            }
-            return null;
-        }
-
-        public void Map(string identifier, string primaryKey)
-        {
-            Dictionary<string, string> query = new Dictionary<string, string>();
-            query.Add("identifier", identifier);
-            query.Add("primaryKey", primaryKey);
-            ApiCall("map", query);
-        }
-
-        public void Unmap(string identifier, string primaryKey)
-        {
-            Dictionary<string, string> query = new Dictionary<string, string>();
-            query.Add("identifier", identifier);
-            query.Add("primaryKey", primaryKey);
-            ApiCall("unmap", query);
-        }
-
-        private XmlElement ApiCall(string methodName, Dictionary<string, string> partialQuery)
-        {
-            Dictionary<string, string> query = new Dictionary<string, string>(partialQuery);
-            query.Add("format", "xml");
-            query.Add("apiKey", apiKey);
-
-            StringBuilder sb = new StringBuilder();
-            foreach (KeyValuePair<string, string> e in query)
-            {
-                if (sb.Length > 0)
-                {
-                    sb.Append('&');
-                }
-
-                sb.Append(System.Web.HttpUtility.UrlEncode(e.Key, Encoding.UTF8));
-                sb.Append('=');
-                sb.Append(HttpUtility.UrlEncode(e.Value, Encoding.UTF8));
-            }
-            string data = sb.ToString();
-
-            Uri url = new Uri(baseUrl + "/api/v2/" + methodName);
-
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-            request.Method = "POST";
-
-            request.ContentType = "application/x-www-form-urlencoded";
-            request.ContentLength = data.Length;
-
-            // Write the request
-            StreamWriter stOut = new StreamWriter(request.GetRequestStream(),
-                                                  Encoding.ASCII);
-            stOut.Write(data);
-            stOut.Close();
-
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            Stream dataStream = response.GetResponseStream();
-
-            XmlDocument doc = new XmlDocument();
-            doc.PreserveWhitespace = false;
-            doc.Load(dataStream);
-
-            XmlElement resp = doc.DocumentElement;
-
-            if (!resp.GetAttribute("stat").Equals("ok"))
-            {
-                throw new SystemException("Unexpected API error:"+resp.OuterXml);
-            }
-
-            return resp;
-        }
-
-        public static void Main(string[] args)
-        {
-            Rpx r = new Rpx(args[0], args[1]);
-
-            if (args[2].Equals("mappings"))
-            {
-                Console.WriteLine("Mappings for " + args[3] + ":");
-                foreach (string s in r.Mappings(args[3]))
-                {
-                    Console.WriteLine(s);
-                }
-            }
-
-            if (args[2].Equals("all_mappings"))
-            {
-                Console.WriteLine("All mappings:");
-
-                foreach (KeyValuePair<string, ArrayList> pair in r.AllMappings())
-                {
-                    Console.WriteLine(pair.Key + ":");
-                    foreach (string identifier in pair.Value)
-                    {
-                        Console.WriteLine("  " + identifier);
-                    }
-                }
-            }
-
-            if (args[2].Equals("map"))
-            {
-                Console.WriteLine(args[3] + " mapped to " + args[4]);
-                r.Map(args[3], args[4]);
-            }
-
-            if (args[2].Equals("unmap"))
-            {
-                Console.WriteLine(args[3] + " unmapped from " + args[4]);
-                r.Unmap(args[3], args[4]);
-            }
-        }
     }
 }

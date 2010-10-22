@@ -56,6 +56,7 @@
     <Compile Include="ICustomIdentity.cs" />
     <Compile Include="Janrain\JanrainLoginHandler.cs" />
     <Compile Include="Janrain\Configuration.Janrain.cs" />
+    <Compile Include="Janrain\RPX.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

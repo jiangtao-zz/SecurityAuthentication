@@ -101,7 +101,7 @@ namespace SecurityAuthentication.Configuration
         /// </summary>
         public static string LanguagePreference { 
             get {
-                return NamedValue("language_preference","en");
+                return NamedValue("language_preference","");
             } 
         }
 
@@ -112,7 +112,7 @@ namespace SecurityAuthentication.Configuration
         {
             get
             {
-                return NamedValue("default_provider", "live_id");
+                return NamedValue("default_provider", "");
             }
         }
 
@@ -123,9 +123,56 @@ namespace SecurityAuthentication.Configuration
         {
             get
             {
-                return NamedValue("overlay", "true");
+                return NamedValue("overlay", "");
             }
         }
+
+        /// <summary>
+        /// property to get the RPXNow.flags
+        /// </summary>
+        public static string Flags
+        {
+            get
+            {
+                return NamedValue("flags", "");
+            }
+        }
+
+        /// <summary>
+        /// property to get the RPXNow.ssl
+        /// </summary>
+        public static bool Ssl
+        {
+            get
+            {
+                string value = NamedValue("ssl", "true");
+                return (value.ToLower() == "true") ? true : false;
+            }
+        }
+
+        /// <summary>
+        /// property to get the appId for RPXNow.init
+        /// </summary>
+        public static string AppId
+        {
+            get
+            {
+                return NamedValue("appId");
+            }
+        }
+
+        /// <summary>
+        /// property to get the xdReceiver for RPXNow.init
+        /// </summary>
+        public static string XdReceiver
+        {
+            get
+            {
+                return NamedValue("xdReceiver","");
+            }
+        }
+
+
         /// <summary>
         /// property to get a home Url
         /// </summary>
