@@ -219,6 +219,14 @@ namespace SecurityAuthentication
             janrainScript.AppendLine("RPXNOW.realm = \"" + this.RpxApplicationDomain + "\";");
             janrainScript.AppendLine("RPXNOW.token_url = \"" + this.TokenUrl + "\";");
             janrainScript.AppendLine("RPXNOW.show();");
+
+            janrainScript.AppendLine("setTimeout('userCancelAction();', 1000);");
+            janrainScript.AppendLine("function userCancelAction() {");
+            janrainScript.AppendLine("  if (RPXNOW.Util.LightBox.currentInstance == null) {");
+            janrainScript.AppendLine("    window.location = \""+JanrainSetting.HomeUrl+"\";");
+            janrainScript.AppendLine("} else {");
+            janrainScript.AppendLine("setTimeout('userCancelAction();', 1000);}}");
+
             janrainScript.AppendLine("</script>");
 
             //janrainScript.AppendLine("<div align=\"center\"><iframe src=\"" + GetLoginUrl(request) + "\"  scrolling=\"no\" frameBorder=\"no\" style=\"width:400px;height:240px; vertical-align: middle;\" align=\"center\"></iframe></center>");

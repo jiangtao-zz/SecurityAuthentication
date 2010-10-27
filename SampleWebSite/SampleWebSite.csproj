@@ -73,6 +73,7 @@
       <DependentUpon>Login.aspx</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SampleCustomPrincipal.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Security\SecurityAuthentication.csproj">

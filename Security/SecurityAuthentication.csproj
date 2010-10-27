@@ -52,8 +52,10 @@
   <ItemGroup>
     <Compile Include="AuthenticationModule.cs" />
     <Compile Include="CustomIdentity.cs" />
+    <Compile Include="CustomPrincipal.cs" />
     <Compile Include="FormsAuthenticationExt.cs" />
     <Compile Include="ICustomIdentity.cs" />
+    <Compile Include="ICustomPrincipal.cs" />
     <Compile Include="Janrain\JanrainLoginHandler.cs" />
     <Compile Include="Janrain\Configuration.Janrain.cs" />
     <Compile Include="Janrain\RPX.cs" />

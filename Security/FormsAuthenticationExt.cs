@@ -77,9 +77,22 @@ namespace SecurityAuthentication
                     customIdentity.Claims.Add(keyValuePairs[0], x.Substring(keyValuePairs[0].Length+1).Replace(replacementOfSeparator, "'"));
                 }
             }
-            //Sync both web context user and current principal
-            context.User = Thread.CurrentPrincipal = new GenericPrincipal(customIdentity, null);
 
+            //Sync both web context user and current principal
+            context.User = Thread.CurrentPrincipal = new CustomPrincipal(GetMappedCustomIdentity(customIdentity));
+
+        }
+
+        /// <summary>
+        /// Mapping external system custom identity to local system identity.
+        /// </summary>
+        /// <param name="customIdentity">The custom Identity from login system</param>
+        /// <returns>return a local custom identity</returns>
+        private static ICustomIdentity GetMappedCustomIdentity(CustomIdentity customIdentity)
+        {
+            //get local identity from cache, if not get from plugin through configuarion setting
+            //TODO--go through the autofac DI could easly solve the mapping issue.
+            return customIdentity;
         }
     }
 }
