@@ -22,7 +22,7 @@ namespace SecurityAuthentication
         private const string userProvidersUniqueId = "userProvidersUniqueId";
         private const string displayName = "displayName";
         private const string email = "email";
-
+        private const string providerName = "providerName";
 
         /// <summary>
         /// Construct a CustomIdentity object with a name property
@@ -111,5 +111,51 @@ namespace SecurityAuthentication
             }
 
         }
+
+        /// <summary>
+        /// Claim provider name
+        /// </summary>
+        /// <remarks>
+        /// The custom identity provided by external Identity System. Following are some provider name:
+        /// "AOL"
+        /// "Facebook"
+        /// "Google"
+        /// "Windows Lives"
+        /// "MySpace"
+        /// "OpenID"
+        /// "Yahoo!"
+        /// "Flickr"
+        /// "MyOpenID"
+        /// "Twitter "
+        /// "LinkedIn"
+        /// "Paypal"
+        /// "Livejournal"
+        /// "Verisign"
+        /// "Wordpress"
+        /// "Blogger"
+        /// "Hyves"
+        /// "Netlog"
+        /// </remarks>
+        public string ProviderName
+        {
+            get
+            {
+                string value = null;
+                Claims.TryGetValue(providerName, out value);
+                return value;
+            }
+            set
+            {
+                if (Claims.ContainsKey(providerName))
+                {
+                    Claims[providerName] = value;
+                }
+                else
+                {
+                    Claims.Add(providerName, value);
+                }
+            }
+        }
+
     }
 }

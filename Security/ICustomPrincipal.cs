@@ -8,6 +8,12 @@ namespace SecurityAuthentication
     /// </summary>
     public interface ICustomPrincipal : IPrincipal
     {
+
+        /// <summary>
+        /// Gets the custom identity of the current principal.
+        /// </summary>
+        new ICustomIdentity Identity { get; }
+
         /// <summary>
         /// Determines whether the current principal has privilege to access the resource.
         /// </summary>
